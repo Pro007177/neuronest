@@ -34,9 +34,7 @@ services:
       - key: JWT_SECRET_KEY
         value: "" # Set in Dashboard Secrets
       - key: FRONTEND_ORIGIN
-        # IMPORTANT: Set this manually in the Render Dashboard Environment settings for 'neuronest-api'
-        # AFTER 'neuronest-web' is deployed, e.g., https://neuronest-web.onrender.com
-        value: "https://neuronest-web.onrender.com" # Placeholder - MUST BE UPDATED MANUALLY
+        value: "https://neuronest-web.onrender.com"
       - key: APP_ENV
         value: production
 

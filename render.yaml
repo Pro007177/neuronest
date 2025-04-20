@@ -1,28 +1,27 @@
 # Render Blueprint specification: https://render.com/docs/blueprint-spec
-# Defines the services needed for the NeuroNest application.
 
 databases:
   # PostgreSQL Database Service (Free Tier)
-  - name: neuronest-db         # Unique name for the database instance within Render
-    databaseName: neuronest_db # The actual database name created inside PostgreSQL
-    user: neuronest_user       # The database user Render will create
-    plan: free                 # Use the free tier (sleeps after inactivity)
-    region: oregon             # Optional: Choose a region
+  - name: neuronest-db
+    databaseName: neuronest_db
+    user: neuronest_user
+    plan: free
+    region: oregon # Databases CAN have regions
 
 services:
   # Backend API Service (FastAPI)
-  - type: web                  # A service that runs code and listens for HTTP requests
-    name: neuronest-api        # Unique name for the backend service
-    runtime: python            # Specify the runtime environment
-    region: oregon             # Match the database region for lower latency
-    rootDir: backend           # Specifies the directory containing the backend code
-    plan: free                 # Use the free tier (sleeps after inactivity)
-    buildCommand: |            # Commands to build the service (run in order)
+  - type: web
+    name: neuronest-api
+    runtime: python
+    region: oregon # Web services CAN have regions
+    rootDir: backend
+    plan: free
+    buildCommand: |
       pip install --upgrade pip
       pip install -r requirements.txt
-      alembic upgrade head      # Apply database migrations during build/deploy
-    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT" # Command to start the server ($PORT is set by Render)
-    healthCheckPath: /api/health # Path Render uses to check if the service is healthy
+      alembic upgrade head
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /api/health
     envVars:
       - key: PYTHON_VERSION
         value: 3.11
@@ -31,38 +30,39 @@ services:
           name: neuronest-db
           property: connectionString
       - key: ANTHROPIC_API_KEY
-        fromSecret: true
+        fromSecret: true # Value will be set in Render Dashboard Secrets
       - key: JWT_SECRET_KEY
-        fromSecret: true
-      - key: FRONTEND_ORIGIN     # URL of the deployed frontend for CORS
-        fromService:
-          type: web              # The frontend is now also type 'web'
-          name: neuronest-web    # Must match the 'name' of the frontend service below
-          property: url
+        fromSecret: true # Value will be set in Render Dashboard Secrets
+      - key: FRONTEND_ORIGIN
+        # IMPORTANT: Render cannot automatically get the public URL of the static site via fromService.
+        # Set this manually in the Render Dashboard Environment settings for 'neuronest-api'
+        # AFTER 'neuronest-web' is deployed, e.g., https://neuronest-web.onrender.com
+        value: "https://your-frontend-url-placeholder.onrender.com" # Placeholder - MUST BE UPDATED MANUALLY
       - key: APP_ENV
         value: production
 
   # Frontend Application Service (React Static Site)
-  # CORRECTED: Use type: web and runtime: static
-  - type: web                  # Use 'web' type for static sites now
-    name: neuronest-web        # Unique name for the frontend service
-    runtime: static            # Specify the 'static' runtime
-    region: oregon             # Match other services' region
-    rootDir: .                 # The root directory of the repository contains the frontend setup
-    plan: free                 # Use the free tier
-    buildCommand: |            # Commands to build the static site
+  - type: web
+    name: neuronest-web
+    runtime: static
+    # region: oregon # REMOVED: Static sites cannot have a region
+    rootDir: .
+    plan: free
+    buildCommand: |
       npm install
       npm run build
-    staticPublishPath: build   # The directory containing the built static files
+    staticPublishPath: build
     envVars:
-      # Environment variables needed by React *during build*
+      # Set the API URL for the React build process.
+      # Use the internal service address format Render provides.
       - key: REACT_APP_API_URL
-        fromService:
-          type: web              # Get value from the backend web service
-          name: neuronest-api    # Must match the 'name' of the backend service above
-          property: url
+        # This constructs the internal URL. Render injects $PORT (usually 10000 for web services).
+        # Replace '10000' if your backend service uses a different internal port, though Render usually manages this.
+        # Alternatively, reference the public URL manually if needed, but internal is often better.
+        value: "http://neuronest-api:10000" # Use internal service name and typical internal port
+        # If the above causes issues, try getting the public URL manually in the dashboard build settings
+        # or use fromService with 'hostport' if that property becomes available for web services.
     routes:
-      # Rewrite rule for single-page applications (like React Router)
       - type: rewrite
-        source: /*              # Match all paths
-        destination: /index.html # Serve the main entry point
+        source: /*
+        destination: /index.html

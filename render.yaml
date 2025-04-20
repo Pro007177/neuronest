@@ -1,0 +1,61 @@
+# Render Blueprint specification: https://render.com/docs/blueprint-spec
+
+databases:
+  # PostgreSQL Database Service (Free Tier)
+  - name: neuronest-db
+    databaseName: neuronest_db
+    user: neuronest_user
+    plan: free
+    region: oregon
+
+services:
+  # Backend API Service (FastAPI)
+  - type: web
+    name: neuronest-api
+    runtime: python
+    region: oregon
+    rootDir: backend
+    plan: free
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+      alembic upgrade head
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.8
+      - key: DATABASE_URL
+        fromDatabase:
+          name: neuronest-db
+          property: connectionString
+      - key: ANTHROPIC_API_KEY
+        value: "" # Set in Dashboard Secrets
+      - key: JWT_SECRET_KEY
+        value: "" # Set in Dashboard Secrets
+      - key: FRONTEND_ORIGIN
+        value: "https://neuronest-web.onrender.com"
+      - key: APP_ENV
+        value: production
+
+  # Frontend Application Service (React Static Site)
+  - type: web
+    name: neuronest-web
+    runtime: static
+    rootDir: .
+    # plan: free # REMOVED
+    buildCommand: |
+      npm install
+      npm run build
+    staticPublishPath: build
+    envVars:
+      # CORRECTED: Use fromService to get the PUBLIC URL of the backend API
+      - key: REACT_APP_API_URL
+        fromService:
+          type: web              # Type of the service to get URL from
+          name: neuronest-api    # Name of the backend service
+          property: url          # Get the public URL property
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

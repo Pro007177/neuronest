@@ -6,14 +6,14 @@ databases:
     databaseName: neuronest_db
     user: neuronest_user
     plan: free
-    region: oregon # Databases CAN have regions
+    region: oregon
 
 services:
   # Backend API Service (FastAPI)
   - type: web
     name: neuronest-api
     runtime: python
-    region: oregon # Web services CAN have regions
+    region: oregon
     rootDir: backend
     plan: free
     buildCommand: |
@@ -29,12 +29,14 @@ services:
         fromDatabase:
           name: neuronest-db
           property: connectionString
+      # Define keys for secrets, leave value empty. Render will prompt.
+      # This approach avoids 'fromSecret' which seems to cause validation issues here.
       - key: ANTHROPIC_API_KEY
-        fromSecret: true # Value will be set in Render Dashboard Secrets
+        value: "" # Leave value empty - Set in Dashboard Environment/Secrets
       - key: JWT_SECRET_KEY
-        fromSecret: true # Value will be set in Render Dashboard Secrets
+        value: "" # Leave value empty - Set in Dashboard Environment/Secrets
       - key: FRONTEND_ORIGIN
-        # IMPORTANT: Render cannot automatically get the public URL of the static site via fromService.
+        # IMPORTANT: Render cannot automatically get the public URL of the static site.
         # Set this manually in the Render Dashboard Environment settings for 'neuronest-api'
         # AFTER 'neuronest-web' is deployed, e.g., https://neuronest-web.onrender.com
         value: "https://your-frontend-url-placeholder.onrender.com" # Placeholder - MUST BE UPDATED MANUALLY
@@ -53,15 +55,9 @@ services:
       npm run build
     staticPublishPath: build
     envVars:
-      # Set the API URL for the React build process.
-      # Use the internal service address format Render provides.
+      # Set the API URL for the React build process using internal service address.
       - key: REACT_APP_API_URL
-        # This constructs the internal URL. Render injects $PORT (usually 10000 for web services).
-        # Replace '10000' if your backend service uses a different internal port, though Render usually manages this.
-        # Alternatively, reference the public URL manually if needed, but internal is often better.
         value: "http://neuronest-api:10000" # Use internal service name and typical internal port
-        # If the above causes issues, try getting the public URL manually in the dashboard build settings
-        # or use fromService with 'hostport' if that property becomes available for web services.
     routes:
       - type: rewrite
         source: /*

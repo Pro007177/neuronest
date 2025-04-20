@@ -5,7 +5,7 @@ databases:
   - name: neuronest-db
     databaseName: neuronest_db
     user: neuronest_user
-    plan: free
+    plan: free                 # Databases DO have plans (free is valid here)
     region: oregon
 
 services:
@@ -15,7 +15,7 @@ services:
     runtime: python
     region: oregon
     rootDir: backend
-    plan: free
+    plan: free                 # Web services DO have plans (free is valid here)
     buildCommand: |
       pip install --upgrade pip
       pip install -r requirements.txt
@@ -29,15 +29,12 @@ services:
         fromDatabase:
           name: neuronest-db
           property: connectionString
-      # Define keys for secrets, leave value empty. Render will prompt.
-      # This approach avoids 'fromSecret' which seems to cause validation issues here.
       - key: ANTHROPIC_API_KEY
         value: "" # Leave value empty - Set in Dashboard Environment/Secrets
       - key: JWT_SECRET_KEY
         value: "" # Leave value empty - Set in Dashboard Environment/Secrets
       - key: FRONTEND_ORIGIN
-        # IMPORTANT: Render cannot automatically get the public URL of the static site.
-        # Set this manually in the Render Dashboard Environment settings for 'neuronest-api'
+        # IMPORTANT: Set this manually in the Render Dashboard Environment settings for 'neuronest-api'
         # AFTER 'neuronest-web' is deployed, e.g., https://neuronest-web.onrender.com
         value: "https://your-frontend-url-placeholder.onrender.com" # Placeholder - MUST BE UPDATED MANUALLY
       - key: APP_ENV
@@ -48,8 +45,8 @@ services:
     name: neuronest-web
     runtime: static
     # region: oregon # REMOVED: Static sites cannot have a region
+    # plan: free     # REMOVED: Static sites don't have separate plans
     rootDir: .
-    plan: free
     buildCommand: |
       npm install
       npm run build

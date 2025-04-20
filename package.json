@@ -2,7 +2,7 @@
   "name": "neuronest-new",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://pro007177.github.io/neuronest/",
+  "homepage": ".",
   "dependencies": {
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",

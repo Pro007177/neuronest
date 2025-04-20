@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/neuronest/static/css/main.a7cb1d66.css",
+    "main.js": "/neuronest/static/js/main.b118e807.js",
+    "static/js/453.fe5dadd9.chunk.js": "/neuronest/static/js/453.fe5dadd9.chunk.js",
+    "index.html": "/neuronest/index.html",
+    "main.a7cb1d66.css.map": "/neuronest/static/css/main.a7cb1d66.css.map",
+    "main.b118e807.js.map": "/neuronest/static/js/main.b118e807.js.map",
+    "453.fe5dadd9.chunk.js.map": "/neuronest/static/js/453.fe5dadd9.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.a7cb1d66.css",
+    "static/js/main.b118e807.js"
+  ]
+}

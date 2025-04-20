@@ -1,52 +1,32 @@
 ﻿from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
+import os
 
 from .core.config import settings
-from .api.v1.endpoints import journal, thoughts, insights # Import new routers
-from .db.session import engine # Import engine for lifespan events (optional)
-# from .db import base # Import base if you need to create tables directly (not recommended with Alembic)
+# Import all endpoint routers
+from .api.v1.endpoints import journal, thoughts, insights, auth, users, mindspace # ADDED mindspace
+# from .db.session import engine # Optional
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# --- Optional: Lifespan events for startup/shutdown ---
-# Useful for things like initial DB checks, but not strictly required
-# @asynccontextmanager
-# async def lifespan(app: FastAPI):
-#     # Startup logic
-#     logger.info("Application startup...")
-#     # You could potentially check DB connection here, but Alembic handles schema
-#     # try:
-#     #     async with engine.connect() as connection:
-#     #         logger.info("Database connection successful.")
-#     # except Exception as e:
-#     #     logger.critical(f"Database connection failed on startup: {e}", exc_info=True)
-#     #     # Decide whether to proceed or raise an error to stop startup
-#     yield
-#     # Shutdown logic
-#     logger.info("Application shutdown...")
-#     if engine:
-#         await engine.dispose() # Cleanly close DB connection pool
-#         logger.info("Database engine disposed.")
+IS_PRODUCTION = os.getenv("APP_ENV", "development").lower() == "production"
 
 app = FastAPI(
     title="NeuroNest API",
     description="Backend API for the NeuroNest mental wellness application.",
-    version="0.2.0", # Incremented version
-    # lifespan=lifespan # Uncomment to enable lifespan events
+    version="0.3.1", # Incremented version
 )
 
-# CORS Middleware (as before)
+# CORS Middleware Configuration
 origins = []
 if settings.FRONTEND_ORIGIN:
     origins.append(settings.FRONTEND_ORIGIN)
-    logger.info(f"Allowing CORS origin: {settings.FRONTEND_ORIGIN}")
-else:
-    logger.warning("FRONTEND_ORIGIN not set, CORS might block frontend requests.")
-    # Add localhost for local dev if needed
-    origins.append("http://localhost:3000")
-
+    logger.info(f"Allowing CORS origin (from config): {settings.FRONTEND_ORIGIN}")
+local_origin = "http://localhost:3000"
+if local_origin not in origins:
+    origins.append(local_origin)
+    logger.info(f"Allowing CORS origin (for local dev): {local_origin}")
 
 app.add_middleware(
     CORSMiddleware,
@@ -56,30 +36,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include API routers
+# --- Include API Routers ---
 api_prefix = "/api/v1"
-app.include_router(thoughts.router, prefix=f"{api_prefix}/thoughts", tags=["thoughts"])
-app.include_router(journal.router, prefix=f"{api_prefix}/journal", tags=["journal"])
-app.include_router(insights.router, prefix=f"{api_prefix}/insights", tags=["insights"])
+app.include_router(auth.router, prefix=f"{api_prefix}/auth", tags=["Authentication"])
+app.include_router(users.router, prefix=f"{api_prefix}/users", tags=["Users"])
+app.include_router(thoughts.router, prefix=f"{api_prefix}/thoughts", tags=["Thoughts"])
+app.include_router(journal.router, prefix=f"{api_prefix}/journal", tags=["Journal"])
+app.include_router(insights.router, prefix=f"{api_prefix}/insights", tags=["Insights"])
+app.include_router(mindspace.router, prefix=f"{api_prefix}/mindspace", tags=["Mindspace"]) # ADDED
 
-
-@app.get("/api/health", tags=["health"])
+# --- Root and Health Check Endpoints ---
+@app.get("/api/health", tags=["Health"])
 async def health_check():
-    # Consider adding a DB check here for a more comprehensive health check
-    # try:
-    #     async with async_session_maker() as session:
-    #         await session.execute(select(1)) # Simple query
-    #     db_status = "ok"
-    # except Exception as e:
-    #     logger.error(f"Health check DB query failed: {e}")
-    #     db_status = "error"
-    # return {"status": "ok", "database": db_status}
-    logger.info("Health check endpoint called.")
+    logger.debug("Health check endpoint called.")
     return {"status": "ok"}
 
-@app.get("/", tags=["root"])
+@app.get("/", tags=["Root"], include_in_schema=False)
 async def read_root():
-    logger.info("Root endpoint called.")
-    return {"message": "Welcome to the NeuroNest API v0.2.0"}
+    logger.debug("Root endpoint called.")
+    return {"message": f"Welcome to the NeuroNest API v{app.version}"}
 
-logger.info("FastAPI application initialized with persistence.")
+logger.info(f"FastAPI application {app.title} v{app.version} initialized.")
+logger.info(f"Running in '{os.getenv('APP_ENV', 'development')}' mode.")
+logger.info(f"Allowed CORS origins: {origins}")

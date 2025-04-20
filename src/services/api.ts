@@ -1,66 +1,138 @@
 import {
-    Thought,
-    ThoughtCreatePayload,
-    JournalSummaryData,
-    GrowthInsightsData,
-    ApiError
-} from '../types'; // Adjust path if needed
+    Thought, ThoughtCreatePayload, JournalSummaryData, GrowthInsightsData, ApiError, ApiErrorDetail,
+    User, TokenResponse, LoginPayload, SignupPayload,
+    Practice, MindspaceRecommendationResponse // Added Mindspace types
+} from '../types'; // Ensure all necessary types are imported
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000'; // Fallback for safety
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 const API_V1_PREFIX = '/api/v1';
 
-// Helper function to handle API responses
+// --- Helper Functions ---
+
+// Get token from storage
+const getToken = (): string | null => {
+    return localStorage.getItem('neuronest_token'); // Ensure key matches AuthContext
+}
+
+// Enhanced handleResponse to parse errors and handle different statuses
 async function handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
-        let errorData: ApiError | string = `HTTP error! status: ${response.status}`;
+        let errorDetail: string = `HTTP error! status: ${response.status}`;
         try {
             // Try to parse specific error details from FastAPI
-            const jsonError = await response.json();
-            errorData = jsonError as ApiError;
-            // Extract a user-friendly message if possible
-            if (typeof errorData === 'object' && errorData?.detail) {
-                if (typeof errorData.detail === 'string') {
-                    errorData = errorData.detail;
-                } else if (Array.isArray(errorData.detail) && errorData.detail[0]?.msg) {
-                    // Handle validation errors array
-                    errorData = errorData.detail.map(d => d.msg).join(', ');
+            const errorJson: ApiError = await response.json();
+             if (typeof errorJson === 'object' && errorJson?.detail) {
+                if (typeof errorJson.detail === 'string') {
+                    errorDetail = errorJson.detail;
+                } else if (Array.isArray(errorJson.detail) && errorJson.detail[0]?.msg) {
+                    // Handle FastAPI validation errors array
+                    errorDetail = errorJson.detail.map((d: ApiErrorDetail) => d.msg).join(', ');
                 } else {
-                     errorData = JSON.stringify(errorData.detail); // Fallback for complex details
+                     errorDetail = JSON.stringify(errorJson.detail); // Fallback
                 }
             } else {
-                 errorData = response.statusText; // Use status text if no detail
+                 errorDetail = response.statusText || `HTTP error ${response.status}`;
             }
-
         } catch (e) {
-            // If parsing fails, use the basic status text
-            errorData = response.statusText || `HTTP error ${response.status}`;
+            // If parsing JSON fails, use the basic status text
+             errorDetail = response.statusText || `HTTP error ${response.status}`;
         }
-         console.error("API Error:", errorData);
-        throw new Error(typeof errorData === 'string' ? errorData : 'API request failed');
+        console.error("API Error:", response.status, errorDetail);
+        throw new Error(errorDetail); // Throw error with extracted message
     }
-    return response.json() as Promise<T>;
+
+    // Handle successful responses
+    const contentType = response.headers.get("content-type");
+    if (response.status === 204) { // No Content
+        return null as T; // Return null for No Content responses
+    }
+    if (contentType && contentType.indexOf("application/json") !== -1) {
+        return response.json() as Promise<T>; // Parse JSON body
+    } else {
+        // Handle non-JSON responses if necessary
+        console.warn("Received non-JSON response:", response);
+        // Try to return text if available, otherwise null
+        try {
+            const text = await response.text();
+            return text as T; // May need adjustment based on expected non-JSON types
+        } catch (e) {
+            return null as T; // Fallback if text cannot be read
+        }
+    }
 }
+
+
+// Helper to create headers with Auth token
+const createAuthHeaders = (token: string | null): HeadersInit => {
+    const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+};
+
+// --- Auth API ---
+
+export const loginUser = async (payload: LoginPayload): Promise<TokenResponse> => {
+    const formData = new URLSearchParams();
+    formData.append('username', payload.username);
+    formData.append('password', payload.password);
+
+    const response = await fetch(`${API_BASE_URL}${API_V1_PREFIX}/auth/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData,
+    });
+    // Use handleResponse, it should work for JSON error details even from form posts
+    return handleResponse<TokenResponse>(response);
+};
+
+export const signupUser = async (payload: SignupPayload): Promise<User> => {
+    const response = await fetch(`${API_BASE_URL}${API_V1_PREFIX}/users`, {
+        method: 'POST',
+        headers: createAuthHeaders(null), // No token needed
+        body: JSON.stringify(payload),
+    });
+    return handleResponse<User>(response);
+};
+
+export const getCurrentUser = async (token: string): Promise<User> => {
+    const response = await fetch(`${API_BASE_URL}${API_V1_PREFIX}/users/me`, {
+        method: 'GET',
+        headers: createAuthHeaders(token),
+    });
+    return handleResponse<User>(response);
+};
+
 
 // --- Thoughts API ---
 
 export const getThoughts = async (): Promise<Thought[]> => {
-    const response = await fetch(`${API_BASE_URL}${API_V1_PREFIX}/thoughts`);
-    return handleResponse<Thought[]>(response);
+    const token = getToken();
+    const response = await fetch(`${API_BASE_URL}${API_V1_PREFIX}/thoughts`, {
+         headers: createAuthHeaders(token),
+    });
+    const result = await handleResponse<Thought[]>(response);
+    return result || []; // Return empty array if response was null/empty
 };
 
 export const createThought = async (payload: ThoughtCreatePayload): Promise<Thought> => {
+    const token = getToken();
     const response = await fetch(`${API_BASE_URL}${API_V1_PREFIX}/thoughts`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: createAuthHeaders(token),
         body: JSON.stringify(payload),
     });
     return handleResponse<Thought>(response);
 };
 
 export const waterThought = async (thoughtId: number): Promise<Thought> => {
+    const token = getToken();
     const response = await fetch(`${API_BASE_URL}${API_V1_PREFIX}/thoughts/${thoughtId}/water`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' }, // Header might not be strictly needed for PUT with no body, but good practice
+        headers: createAuthHeaders(token),
     });
     return handleResponse<Thought>(response);
 };
@@ -68,11 +140,11 @@ export const waterThought = async (thoughtId: number): Promise<Thought> => {
 // --- Journal API ---
 
 export const getJournalSummary = async (): Promise<JournalSummaryData> => {
-    // Assuming the request body is simple for now, adjust if needed
-    const payload = { period: "past week" };
+    const token = getToken();
+    const payload = { period: "past week" }; // Keep payload simple
     const response = await fetch(`${API_BASE_URL}${API_V1_PREFIX}/journal/summary`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: createAuthHeaders(token),
         body: JSON.stringify(payload),
     });
     return handleResponse<JournalSummaryData>(response);
@@ -81,6 +153,23 @@ export const getJournalSummary = async (): Promise<JournalSummaryData> => {
  // --- Insights API ---
 
  export const getGrowthInsights = async (periodDays: number = 30): Promise<GrowthInsightsData> => {
-    const response = await fetch(`${API_BASE_URL}${API_V1_PREFIX}/insights?period_days=${periodDays}`);
+    const token = getToken();
+    const response = await fetch(`${API_BASE_URL}${API_V1_PREFIX}/insights?period_days=${periodDays}`, {
+         headers: createAuthHeaders(token),
+    });
     return handleResponse<GrowthInsightsData>(response);
 };
+
+ // --- Mindspace API (NEW) ---
+ export const getMindspaceRecommendations = async (mood: string): Promise<Practice[]> => {
+    const token = getToken();
+    const payload = { mood };
+    const response = await fetch(`${API_BASE_URL}${API_V1_PREFIX}/mindspace/recommendations`, {
+        method: 'POST',
+        headers: createAuthHeaders(token),
+        body: JSON.stringify(payload),
+    });
+    // The backend returns { recommendations: Practice[] }, extract the array
+    const data = await handleResponse<MindspaceRecommendationResponse>(response);
+    return data.recommendations || []; // Return the array or empty if null/undefined
+ };

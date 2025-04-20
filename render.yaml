@@ -36,7 +36,7 @@ services:
       - key: FRONTEND_ORIGIN
         # IMPORTANT: Set this manually in the Render Dashboard Environment settings for 'neuronest-api'
         # AFTER 'neuronest-web' is deployed, e.g., https://neuronest-web.onrender.com
-        value: "https://your-frontend-url-placeholder.onrender.com" # Placeholder - MUST BE UPDATED MANUALLY
+        value: "https://neuronest-web.onrender.com/" # Placeholder - MUST BE UPDATED MANUALLY
       - key: APP_ENV
         value: production
 

@@ -1,0 +1,16 @@
+﻿fastapi>=0.104.1,<0.111.0
+uvicorn[standard]>=0.24.0,<0.25.0
+pydantic>=2.5.2,<3.0.0
+pydantic-settings>=2.0.0,<3.0.0 # For newer pydantic settings import
+python-dotenv>=1.0.0,<2.0.0
+anthropic>=0.25.0,<1.0.0
+requests>=2.31.0,<3.0.0
+
+# Database & ORM
+sqlalchemy[asyncio]>=2.0.0,<2.1.0
+alembic>=1.12.0,<1.14.0
+asyncpg>=0.28.0,<0.30.0 # Async PostgreSQL driver
+greenlet>=3.0.0 # Often needed by SQLAlchemy async/Alembic
+
+# Optional: for type hinting if using older Python/SQLAlchemy versions
+# sqlalchemy-stubs

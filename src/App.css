@@ -1,0 +1,123 @@
+/* Custom styles to complement Bootstrap */
+
+/* General utility classes */
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.min-vh-100 {
+  min-height: 100vh;
+}
+
+/* Transitions */
+.transition {
+  transition: all 0.3s ease;
+}
+
+/* Hover effects */
+.hover-shadow:hover {
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.hover-shadow-lg:hover {
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.175) !important;
+}
+
+.hover-border-success:hover {
+  border-color: #198754 !important;
+}
+
+.hover-border-primary:hover {
+  border-color: #0d6efd !important;
+}
+
+.hover-border-indigo:hover {
+  border-color: #6610f2 !important;
+}
+
+.hover-bg-light:hover {
+  background-color: #f8f9fa !important;
+}
+
+/* Custom colors for elements not in Bootstrap */
+.text-indigo {
+  color: #6610f2 !important;
+}
+
+.bg-indigo-subtle {
+  background-color: #e0cffc !important;
+}
+
+.btn-indigo {
+  color: #fff;
+  background-color: #6610f2;
+  border-color: #6610f2;
+}
+
+.btn-indigo:hover {
+  color: #fff;
+  background-color: #560dc7;
+  border-color: #510bc4;
+}
+
+.btn-outline-indigo {
+  color: #6610f2;
+  border-color: #6610f2;
+}
+
+.btn-outline-indigo:hover {
+  color: #fff;
+  background-color: #6610f2;
+  border-color: #6610f2;
+}
+
+.text-purple {
+  color: #6f42c1 !important;
+}
+
+.btn-purple {
+  color: #fff;
+  background-color: #6f42c1;
+  border-color: #6f42c1;
+}
+
+.btn-purple:hover {
+  color: #fff;
+  background-color: #5d36a4;
+  border-color: #59339d;
+}
+
+.alert-purple {
+  color: #3c2465;
+  background-color: #e2d9f3;
+  border-color: #d8ccee;
+}
+
+/* Animation for the breathing circle */
+.pulse-animation {
+  animation: pulse 4s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.7;
+  }
+}
+
+/* Z-index utilities */
+.z-index-100 {
+  z-index: 100;
+}
+
+.z-index-1000 {
+  z-index: 1000;
+}

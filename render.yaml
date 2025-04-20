@@ -5,7 +5,7 @@ databases:
   - name: neuronest-db
     databaseName: neuronest_db
     user: neuronest_user
-    plan: free                 # Databases DO have plans (free is valid here)
+    plan: free
     region: oregon
 
 services:
@@ -15,7 +15,7 @@ services:
     runtime: python
     region: oregon
     rootDir: backend
-    plan: free                 # Web services DO have plans (free is valid here)
+    plan: free
     buildCommand: |
       pip install --upgrade pip
       pip install -r requirements.txt
@@ -30,9 +30,9 @@ services:
           name: neuronest-db
           property: connectionString
       - key: ANTHROPIC_API_KEY
-        value: "" # Leave value empty - Set in Dashboard Environment/Secrets
+        value: "" # Set in Dashboard Secrets
       - key: JWT_SECRET_KEY
-        value: "" # Leave value empty - Set in Dashboard Environment/Secrets
+        value: "" # Set in Dashboard Secrets
       - key: FRONTEND_ORIGIN
         # IMPORTANT: Set this manually in the Render Dashboard Environment settings for 'neuronest-api'
         # AFTER 'neuronest-web' is deployed, e.g., https://neuronest-web.onrender.com
@@ -44,17 +44,19 @@ services:
   - type: web
     name: neuronest-web
     runtime: static
-    # region: oregon # REMOVED: Static sites cannot have a region
-    # plan: free     # REMOVED: Static sites don't have separate plans
     rootDir: .
+    # plan: free # REMOVED
     buildCommand: |
       npm install
       npm run build
     staticPublishPath: build
     envVars:
-      # Set the API URL for the React build process using internal service address.
+      # CORRECTED: Use fromService to get the PUBLIC URL of the backend API
       - key: REACT_APP_API_URL
-        value: "http://neuronest-api:10000" # Use internal service name and typical internal port
+        fromService:
+          type: web              # Type of the service to get URL from
+          name: neuronest-api    # Name of the backend service
+          property: url          # Get the public URL property
     routes:
       - type: rewrite
         source: /*

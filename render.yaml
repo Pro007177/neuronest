@@ -6,8 +6,8 @@ databases:
   - name: neuronest-db         # Unique name for the database instance within Render
     databaseName: neuronest_db # The actual database name created inside PostgreSQL
     user: neuronest_user       # The database user Render will create
-    plan: free                 # Use the free tier (sleeps after inactivity, data may not be persistent long-term)
-    region: oregon             # Optional: Choose a region (e.g., oregon, frankfurt, singapore)
+    plan: free                 # Use the free tier (sleeps after inactivity)
+    region: oregon             # Optional: Choose a region
 
 services:
   # Backend API Service (FastAPI)
@@ -24,43 +24,45 @@ services:
     startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT" # Command to start the server ($PORT is set by Render)
     healthCheckPath: /api/health # Path Render uses to check if the service is healthy
     envVars:
-      - key: PYTHON_VERSION      # Specify Python version (check Render's supported versions)
+      - key: PYTHON_VERSION
         value: 3.11
-      - key: DATABASE_URL        # Automatically set by Render from the linked database
+      - key: DATABASE_URL
         fromDatabase:
-          name: neuronest-db     # Must match the 'name' of the database service above
-          property: connectionString # Use the connection string provided by Render
-      - key: ANTHROPIC_API_KEY   # API Key for Claude
-        fromSecret: true         # Indicate value comes from Render's secret management
-      - key: JWT_SECRET_KEY      # Secret key for signing JWT tokens
-        fromSecret: true         # Indicate value comes from Render's secret management
+          name: neuronest-db
+          property: connectionString
+      - key: ANTHROPIC_API_KEY
+        fromSecret: true
+      - key: JWT_SECRET_KEY
+        fromSecret: true
       - key: FRONTEND_ORIGIN     # URL of the deployed frontend for CORS
         fromService:
-          type: static           # The type of the service providing the value
+          type: web              # The frontend is now also type 'web'
           name: neuronest-web    # Must match the 'name' of the frontend service below
-          property: url          # Get the public URL of the frontend service
-      - key: APP_ENV             # Environment variable to indicate production mode
+          property: url
+      - key: APP_ENV
         value: production
 
   # Frontend Application Service (React Static Site)
-  - type: static               # A service that serves static files (HTML, CSS, JS)
+  # CORRECTED: Use type: web and runtime: static
+  - type: web                  # Use 'web' type for static sites now
     name: neuronest-web        # Unique name for the frontend service
+    runtime: static            # Specify the 'static' runtime
     region: oregon             # Match other services' region
     rootDir: .                 # The root directory of the repository contains the frontend setup
     plan: free                 # Use the free tier
     buildCommand: |            # Commands to build the static site
-      npm install              # Install Node.js dependencies
-      npm run build            # Run the React build script
-    publishDir: build          # The directory containing the built static files (output of npm run build)
+      npm install
+      npm run build
+    staticPublishPath: build   # The directory containing the built static files
     envVars:
-      - key: REACT_APP_API_URL   # Environment variable needed by React *during build*
+      # Environment variables needed by React *during build*
+      - key: REACT_APP_API_URL
         fromService:
-          type: web              # Get value from a web service
+          type: web              # Get value from the backend web service
           name: neuronest-api    # Must match the 'name' of the backend service above
-          property: url          # Get the public URL of the backend service
+          property: url
     routes:
       # Rewrite rule for single-page applications (like React Router)
-      # Serves index.html for any path not matching a static file
       - type: rewrite
         source: /*              # Match all paths
         destination: /index.html # Serve the main entry point
